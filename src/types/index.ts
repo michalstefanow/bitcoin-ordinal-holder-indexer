@@ -115,3 +115,17 @@ export interface IHolder {
   /** Array of inscription IDs owned by this wallet in the specific collection */
   inscription_ids: string[];
 }
+
+/**
+ * Interface representing a Bitcoin bitmap holder with their owned bitmap inscriptions
+ * Used for bitmap-specific analysis and integration with collection holder data
+ * 
+ * @interface IBitmap
+ */
+export interface IBitmap {
+  /** Bitcoin wallet address of the bitmap holder */
+  wallet: string;
+  
+  /** Array of bitmap inscription IDs owned by this wallet */
+  inscription_ids: string[];
+}
