@@ -10,9 +10,12 @@ const logger = new Logger('Main');
 async function main(): Promise<void> {
   logger.info('Starting TypeScript application...');
 
-  // await fetchCollectionList();
-  // await summarizeHolders();
+  await fetchCollectionList();
+  logger.info('Collection list fetched');
+  await summarizeHolders();
+  logger.info('Holders summarized');
   await filterHolders();
+  logger.info('Holders filtered');
 }
 
 async function fetchCollectionList(): Promise<void> {
@@ -59,6 +62,34 @@ async function fetchCollectionList(): Promise<void> {
   await saveCollectionsToFile(collectionList);
 }
 
+async function summarizeHolders() {
+  const holdersSummary: Record<string, string[]> = {};
+
+  // Load collections from latest JSON file
+  const collectionsPath = await getLatestCollectionsFile();
+  const collectionsData = await fs.readFile(collectionsPath, 'utf-8');
+  const collections: ICollection[] = JSON.parse(collectionsData);
+
+  logger.info(`Summarizing holders for ${collections.length} collections`);
+
+  for (const collection of collections) {
+    const holders = await fetchHoldersPerCollection(collection.slug);
+    holders.forEach((holder) => {
+      if (!holdersSummary[holder.wallet]) {
+        holdersSummary[holder.wallet] = [];
+      } else {
+        logger.info(`Holder ${holder.wallet} already exists`);
+        logger.info(`✅ More ${holder.inscription_ids.length} is added to ${holder.wallet}`);
+      }
+      holdersSummary[holder.wallet]!.push(...holder.inscription_ids);
+    });
+  }
+
+  // Save holders summary to JSON file
+  await saveHoldersSummaryToFile(holdersSummary);
+  return holdersSummary;
+}
+
 async function fetchHoldersPerCollection(slug: string): Promise<IHolder[]> {
   const bestinslotApiKey = process.env.BEST_IN_SLOT;
   
@@ -90,45 +121,57 @@ async function fetchHoldersPerCollection(slug: string): Promise<IHolder[]> {
   return holdersList;
 }
 
-async function summarizeHolders() {
-  const holdersSummary: Record<string, string[]> = {};
-
-  // Load collections from JSON file
-  const collectionsPath = path.join(process.cwd(), 'data', 'collections.json');
-  const collectionsData = await fs.readFile(collectionsPath, 'utf-8');
-  const collections: ICollection[] = JSON.parse(collectionsData);
-
-  logger.info(`Summarizing holders for ${collections.length} collections`);
-
-  let index = 0;
-
-  for (const collection of collections) {
-    const holders = await fetchHoldersPerCollection(collection.slug);
-    holders.forEach((holder) => {
-      if (!holdersSummary[holder.wallet]) {
-        holdersSummary[holder.wallet] = [];
-      } else {
-        logger.info(`Holder ${holder.wallet} already exists`);
-        logger.info(`✅ More ${holder.inscription_ids.length} is added to ${holder.wallet}`);
-      }
-      holdersSummary[holder.wallet]!.push(...holder.inscription_ids);
-    });
-    index++;
-    if(index > 30) {
-      break;
+async function getLatestCollectionsFile(): Promise<string> {
+  const dataDir = path.join(process.cwd(), 'data');
+  
+  try {
+    const files = await fs.readdir(dataDir);
+    const collectionsFiles = files
+      .filter(file => file.startsWith('collections-') && file.endsWith('.json'))
+      .sort()
+      .reverse(); // Sort descending to get latest first
+    
+    if (collectionsFiles.length === 0) {
+      throw new Error('No collections files found in data directory');
     }
+    
+    const latestFile = collectionsFiles[0]!; // Non-null assertion since we checked length
+    logger.info(`Using latest collections file: ${latestFile}`);
+    return path.join(dataDir, latestFile);
+  } catch (error) {
+    logger.error('Error finding collections files:', error);
+    throw error;
   }
+}
 
-  // Save holders summary to JSON file
-  await saveHoldersSummaryToFile(holdersSummary);
-  return holdersSummary;
+async function getLatestHoldersSummaryFile(): Promise<string> {
+  const dataDir = path.join(process.cwd(), 'data');
+  
+  try {
+    const files = await fs.readdir(dataDir);
+    const holdersSummaryFiles = files
+      .filter(file => file.startsWith('holderSummary-') && file.endsWith('.json'))
+      .sort()
+      .reverse(); // Sort descending to get latest first
+    
+    if (holdersSummaryFiles.length === 0) {
+      throw new Error('No holderSummary files found in data directory');
+    }
+    
+    const latestFile = holdersSummaryFiles[0]!; // Non-null assertion since we checked length
+    logger.info(`Using latest holderSummary file: ${latestFile}`);
+    return path.join(dataDir, latestFile);
+  } catch (error) {
+    logger.error('Error finding holderSummary files:', error);
+    throw error;
+  }
 }
 
 async function filterHolders(): Promise<void> {
   const filteredHoldersSummary: Record<string, string[]> = {};
 
-  // Load holders summary from JSON file
-  const holdersSummaryPath = path.join(process.cwd(), 'data', 'holderSummary.json');
+  // Load holders summary from latest JSON file
+  const holdersSummaryPath = await getLatestHoldersSummaryFile();
   const holdersSummaryData = await fs.readFile(holdersSummaryPath, 'utf-8');
   const holdersSummary: Record<string, string[]> = JSON.parse(holdersSummaryData);
   
@@ -185,7 +228,7 @@ async function saveHoldersSummaryToFile(holdersSummary: Record<string, string[]>
 async function saveFilteredHoldersSummaryToFile(filteredHoldersSummary: Record<string, string[]>): Promise<void> {
   try {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `filteredHolderSummary-${timestamp}.json`;
+    const filename = `FinalResult-${timestamp}.json`;
     const filePath = path.join(process.cwd(), 'data', filename);
     
     // Create data directory if it doesn't exist
@@ -200,8 +243,6 @@ async function saveFilteredHoldersSummaryToFile(filteredHoldersSummary: Record<s
     logger.error('Failed to save filtered holders summary to file:', error);
   }
 }
-
-
 
 // Run the application
 main().catch((error) => {
