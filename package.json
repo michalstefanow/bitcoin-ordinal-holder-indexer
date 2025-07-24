@@ -1,8 +1,22 @@
 {
-  "name": "typescript-project",
+  "name": "bitcoin-ordinal-holder-indexer",
   "version": "1.0.0",
-  "description": "A modern TypeScript project with proper tooling",
+  "description": "A TypeScript application that analyzes Bitcoin inscription holders across collections using the BestInSlot API to identify cross-collection whale wallets and generate filtered investment research reports.",
   "main": "dist/index.js",
+  "author": {
+    "name": "Michal Stefanow",
+    "email": "michalstefanow.marek@gmail.com",
+    "telegram": "@mylord1_1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/michalstefanow/bitcoin-ordinal-holder-indexer"
+  },
+  "homepage": "https://github.com/michalstefanow/bitcoin-ordinal-holder-indexer#readme",
+  "bugs": {
+    "url": "https://github.com/michalstefanow/bitcoin-ordinal-holder-indexer/issues",
+    "email": "michalstefanow.marek@gmail.com"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
@@ -16,12 +30,24 @@
     "format": "prettier --write src/**/*.ts"
   },
   "keywords": [
+    "bitcoin",
+    "ordinals",
+    "inscriptions",
+    "blockchain",
+    "crypto",
+    "holder-analysis",
+    "whale-tracking",
+    "investment-research",
     "typescript",
     "node",
-    "development"
+    "api-integration",
+    "data-analysis"
   ],
-  "author": "",
   "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
   "devDependencies": {
     "@types/jest": "^29.5.8",
     "@types/node": "^20.10.0",
