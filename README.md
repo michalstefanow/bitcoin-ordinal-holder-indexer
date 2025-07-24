@@ -1,24 +1,27 @@
-# Inscription Holder Analyzer
+# Bitcoin Ordinal Holder Indexer
 
 A comprehensive TypeScript application for analyzing Bitcoin inscription holders across collections using the BestInSlot API. This tool fetches collection data, analyzes holder patterns, and generates filtered reports for investment and analysis purposes.
 
 ## 🚀 Features
 
 - **Collection Data Fetching**: Automatically retrieves all inscription collections from BestInSlot API
-- **Holder Analysis**: Fetches detailed holder information for each collection
+- **Bitmap Holder Analysis**: Fetches comprehensive bitmap holder data
 - **Cross-Collection Analysis**: Identifies wallets holding inscriptions across multiple collections
 - **Smart Filtering**: Filters holders based on inscription count thresholds
 - **Automated File Management**: Generates timestamped reports with automatic latest file detection
+- **Large Data Handling**: Automatic chunking and merging for extremely large datasets
 - **Rate Limiting**: Built-in delays to respect API rate limits
 - **Comprehensive Logging**: Detailed logging with timestamps and context
 - **Error Handling**: Robust error handling with graceful fallbacks
+- **Modular Architecture**: Clean, maintainable, and testable codebase
 
 ## 📊 Data Pipeline
 
 ```
-1. Collection Fetching → 2. Holder Analysis → 3. Data Aggregation → 4. Filtering → 5. Report Generation
+1. Collection Fetching → 2. Bitmap Fetching → 3. Holder Analysis → 4. Data Aggregation → 5. Filtering → 6. Report Generation
    
    ├── API: BestInSlot Collections
+   ├── API: BestInSlot Bitmaps
    ├── API: Collection Holders  
    ├── Merge holder data
    ├── Filter by criteria
@@ -29,18 +32,26 @@ A comprehensive TypeScript application for analyzing Bitcoin inscription holders
 
 ```
 src/
-├── index.ts                 # Main application orchestrator
+├── index.ts                    # Main application entry point (65 lines)
+├── services/                   # Business logic services
+│   ├── index.ts               # Service exports
+│   ├── api.ts                 # BestInSlot API interactions
+│   ├── fileManager.ts         # File system operations
+│   ├── dataProcessor.ts       # Data analysis and processing
+│   └── orchestrator.ts        # Application workflow coordination
 ├── types/
-│   └── index.ts            # TypeScript interfaces (ICollection, IHolder)
+│   └── index.ts               # TypeScript interfaces (ICollection, IHolder, IBitmap)
 ├── utils/
-│   ├── logger.ts           # Advanced logging utility
-│   └── delay.ts            # Rate limiting utility
+│   ├── logger.ts              # Advanced logging utility
+│   └── delay.ts               # Rate limiting utility
 └── __tests__/
-    └── calculator.test.ts   # Unit tests
+    └── calculator.test.ts      # Unit tests
 
-data/                        # Generated data files (gitignored)
+data/                           # Generated data files (gitignored)
 ├── collections-YYYY-MM-DDTHH-mm-ss-sssZ.json
+├── bitmapList-YYYY-MM-DDTHH-mm-ss-sssZ.json
 ├── holderSummary-YYYY-MM-DDTHH-mm-ss-sssZ.json
+├── holderSummary-YYYY-MM-DDTHH-mm-ss-sssZ-chunk1.json (for large datasets)
 └── FinalResult-YYYY-MM-DDTHH-mm-ss-sssZ.json
 ```
 
@@ -88,156 +99,216 @@ npm run dev
 
 This executes:
 1. **Collection Fetching**: Downloads all inscription collections
-2. **Holder Summarization**: Analyzes holders across collections
-3. **Data Filtering**: Applies filtering criteria (holders with >10 inscriptions)
+2. **Bitmap Fetching**: Downloads all bitmap holder data
+3. **Holder Summarization**: Analyzes holders across collections and bitmaps
+4. **Data Filtering**: Applies filtering criteria (holders with ≥10 inscriptions)
 
-### Individual Operations
+### Flexible Execution Modes
 
-You can also run specific operations by modifying the `main()` function in `src/index.ts`:
+The new modular architecture provides multiple execution modes:
 
+#### **Full Pipeline** (Default)
 ```typescript
-// Fetch only collections
-await fetchCollectionList();
+import { runFullPipeline } from './services';
 
-// Analyze holders from existing collections
-await summarizeHolders();
-
-// Filter existing holder data
-await filterHolders();
+// Execute complete analysis pipeline
+await runFullPipeline();
 ```
 
-## 📋 Available Scripts
+#### **Data Fetching Only**
+```typescript
+import { runDataFetchingOnly } from './services';
 
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Run in development mode with hot reload |
-| `npm run build` | Compile TypeScript to JavaScript |
-| `npm start` | Run compiled JavaScript |
-| `npm test` | Execute test suite |
-| `npm run lint` | Check code quality |
-| `npm run format` | Format code with Prettier |
-| `npm run clean` | Remove build artifacts |
+// Update source data without re-analyzing
+await runDataFetchingOnly();
+```
 
-## 📄 Output Files
+#### **Analysis Only**
+```typescript
+import { runAnalysisOnly } from './services';
 
-The application generates three types of timestamped files:
+// Re-analyze existing data
+await runAnalysisOnly();
+```
 
-### 1. Collections Data
-**File**: `collections-YYYY-MM-DDTHH-mm-ss-sssZ.json`
+#### **Individual Operations**
+```typescript
+import { runHolderSummarizationOnly, runHolderFilteringOnly } from './services';
+
+// Summarize holders only
+await runHolderSummarizationOnly();
+
+// Filter holders only
+await runHolderFilteringOnly();
+```
+
+#### **Status Check**
+```typescript
+import { getAnalysisStatus } from './services';
+
+// Get current analysis status
+const status = await getAnalysisStatus();
+console.log(`Qualified holders: ${status.qualifiedHolders}`);
+```
+
+### Individual Service Usage
+
+You can also use individual services directly:
+
+```typescript
+import { 
+  fetchCollectionList, 
+  saveCollectionsToFile,
+  getLatestCollectionsFile 
+} from './services';
+
+// Fetch and save collections
+const collections = await fetchCollectionList();
+await saveCollectionsToFile(collections);
+
+// Get latest collections file
+const latestFile = await getLatestCollectionsFile();
+```
+
+## 📁 Output Files
+
+The application generates several types of timestamped files:
+
+### **Collections Data** (`collections-*.json`)
 - Raw collection data from BestInSlot API
-- Includes metadata, floor prices, volumes, and supply information
+- Contains collection metadata, statistics, and identifiers
 
-### 2. Holder Summary
-**File**: `holderSummary-YYYY-MM-DDTHH-mm-ss-sssZ.json`
-- Aggregated holder data across all collections
-- Format: `{ "wallet_address": ["inscription_id1", "inscription_id2", ...] }`
+### **Bitmap Data** (`bitmapList-*.json`)
+- Bitmap holder data from BestInSlot API
+- Contains wallet addresses and their bitmap inscriptions
 
-### 3. Filtered Results
-**File**: `FinalResult-YYYY-MM-DDTHH-mm-ss-sssZ.json`
-- Filtered holders meeting criteria (>10 inscriptions)
-- Ready for analysis and investment research
+### **Holder Summary** (`holderSummary-*.json`)
+- Aggregated holder data across all collections and bitmaps
+- Maps wallet addresses to all their inscription IDs
+- May be split into chunks for large datasets (`holderSummary-*-chunk*.json`)
 
-## 🔧 Configuration
+### **Final Results** (`FinalResult-*.json`)
+- Filtered holder data meeting criteria (≥10 inscriptions)
+- Primary output for investment analysis
 
-### API Rate Limiting
-Modify delay settings in the code:
-```typescript
-await delay(1500); // 1.5 second delay between requests
-```
+## ⚙️ Configuration
+
+### Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `BEST_IN_SLOT` | BestInSlot API key | Yes |
 
 ### Filtering Criteria
-Adjust holder filtering thresholds:
+
+The default filtering threshold is **10 inscriptions per wallet**. This can be modified in `src/services/dataProcessor.ts`:
+
 ```typescript
-if(inscriptions && inscriptions.length > 10) { // Change threshold here
+// In filterHolders() function
+if (inscriptions && inscriptions.length >= 10) { // Change this number
   filteredHoldersSummary[wallet] = inscriptions;
 }
 ```
 
-## 📊 Data Structures
+## 🔧 Available Scripts
 
-### Collection Interface
-```typescript
-interface ICollection {
-  name: string;
-  slug: string;
-  inscription_icon_id: string;
-  supply: string;
-  min_number: number;
-  median_number: number;
-  max_number: number;
-  floor_price: number | null;
-  vol_24h_in_btc: number;
-  vol_7d_in_btc: number;
-  marketcap: number;
-  // ... additional fields
-}
-```
+| Script | Description |
+|--------|-------------|
+| `npm run build` | Compile TypeScript to JavaScript |
+| `npm run dev` | Run the application in development mode |
+| `npm run start` | Run the compiled application |
+| `npm run test` | Run unit tests |
+| `npm run lint` | Run ESLint for code quality |
+| `npm run format` | Format code with Prettier |
 
-### Holder Interface
-```typescript
-interface IHolder {
-  wallet: string;
-  inscription_ids: string[];
-}
-```
+## 🏗️ Architecture Overview
 
-## 🔒 Security & Best Practices
+### **Service Modules**
 
-- ✅ **API Keys**: Stored securely in environment variables
-- ✅ **Rate Limiting**: Respects API rate limits with delays
-- ✅ **Error Handling**: Comprehensive error handling throughout
-- ✅ **Type Safety**: Full TypeScript type checking enabled
-- ✅ **Data Validation**: Input validation and error recovery
-- ✅ **Logging**: Detailed operation logging for debugging
+#### **API Service** (`src/services/api.ts`)
+- Handles all BestInSlot API interactions
+- Implements rate limiting and error handling
+- Supports pagination for large datasets
+
+#### **File Manager Service** (`src/services/fileManager.ts`)
+- Manages all file system operations
+- Handles automatic chunking for large files
+- Implements safe JSON serialization
+- Merges chunked files automatically
+
+#### **Data Processor Service** (`src/services/dataProcessor.ts`)
+- Processes and analyzes holder data
+- Implements cross-collection aggregation
+- Handles data validation and cleaning
+- Applies filtering criteria
+
+#### **Orchestrator Service** (`src/services/orchestrator.ts`)
+- Coordinates the complete application workflow
+- Provides flexible execution modes
+- Manages error handling and logging
+
+### **Key Features**
+
+- **Modular Design**: Each service has a single responsibility
+- **Error Isolation**: Errors in one service don't affect others
+- **Memory Efficiency**: Handles extremely large datasets through chunking
+- **Type Safety**: Full TypeScript support with strict typing
+- **Professional Logging**: Structured logging with context and timestamps
 
 ## 🧪 Testing
 
-Run the test suite:
-```bash
-npm test
+The modular architecture enables easy testing:
+
+```typescript
+// Test individual services
+import { fetchCollectionList } from './services/api';
+import { getLatestCollectionsFile } from './services/fileManager';
+import { filterHolders } from './services/dataProcessor';
+
+// Each service can be tested in isolation
 ```
 
-For watch mode during development:
-```bash
-npm run test:watch
-```
+## 📈 Performance & Scalability
 
-## 🔍 Monitoring & Debugging
+### **Large Data Handling**
+- **Automatic Chunking**: Files >50MB are automatically split
+- **Memory Management**: Efficient handling of large datasets
+- **Safe Serialization**: Robust JSON serialization with fallbacks
 
-The application provides detailed logging:
+### **API Optimization**
+- **Rate Limiting**: 1.5-second delays between requests
+- **Pagination**: Efficient data fetching in batches
+- **Error Recovery**: Graceful handling of API failures
 
-```
-[2025-01-24T06:30:45.123Z] [INFO] [Main] Starting TypeScript application...
-[2025-01-24T06:30:45.124Z] [INFO] [Main] Fetching collection list from https://api.bestinslot.xyz/...
-[2025-01-24T06:30:46.234Z] [INFO] [Main] Fetched 100 collections
-[2025-01-24T06:30:46.235Z] [INFO] [Main] Collection list fetched
-[2025-01-24T06:30:46.236Z] [INFO] [Main] Using latest collections file: collections-2025-01-24T06-30-45-123Z.json
-```
+## 🔮 Future Enhancements
+
+The modular architecture enables easy future enhancements:
+
+1. **Database Integration**: Add database service for persistent storage
+2. **Web API**: Create REST API service for external access
+3. **Real-time Processing**: Add streaming service for live data
+4. **Advanced Analytics**: Add analytics service for deeper insights
+5. **Configuration Management**: Add config service for dynamic settings
 
 ## 🤝 Contributing
 
-1. **Fork the repository**
-2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
-3. **Commit your changes**: `git commit -m 'Add amazing feature'`
-4. **Push to the branch**: `git push origin feature/amazing-feature`
-5. **Open a Pull Request**
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-### Development Guidelines
+## 📄 License
 
-- Follow existing code style and TypeScript patterns
-- Add tests for new features
-- Run `npm run lint` and `npm test` before committing
-- Update documentation for new features
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 📈 Use Cases
+## 📞 Contact
 
-- **Investment Research**: Identify power users and whale wallets
-- **Market Analysis**: Understand holder distribution patterns
-- **Collection Analytics**: Compare holder patterns across collections
-- **Portfolio Tracking**: Monitor inscription holder movements
-- **Research & Development**: Analyze inscription ecosystem trends
+- **Email**: michalstefanow.marek@gmail.com
+- **Telegram**: @mylord1_1
+- **GitHub**: [@michalstefanow](https://github.com/michalstefanow)
 
-## 🐛 Troubleshooting
+## 🆘 Troubleshooting
 
 ### Common Issues
 
@@ -245,43 +316,43 @@ The application provides detailed logging:
 ```
 Error: BEST_IN_SLOT API key is required
 ```
-*Solution*: Ensure your `.env` file contains a valid API key
+**Solution**: Ensure your `.env` file contains the correct API key.
 
-**No Collections Files Found**
+**Memory Issues**
+```
+Error: Invalid string length
+```
+**Solution**: The application automatically handles large datasets through chunking.
+
+**File Not Found**
 ```
 Error: No collections files found in data directory
 ```
-*Solution*: Run the collection fetching step first: `fetchCollectionList()`
+**Solution**: Run the data fetching operations first to generate the required files.
 
-**Rate Limiting**
-```
-API request failed: 429 Too Many Requests
-```
-*Solution*: Increase delay times in the code or wait before retrying
+### Getting Help
 
-## 📜 License
+If you encounter issues:
+1. Check the logs for detailed error messages
+2. Ensure your API key is valid and has sufficient permissions
+3. Verify your Node.js version is 18 or higher
+4. Check the [troubleshooting section](#troubleshooting) above
 
-MIT License - see [LICENSE](LICENSE) file for details
+## 📊 Use Cases
 
-## 📞 Contact
+### **Investment Research**
+- Identify high-value holders across multiple collections
+- Analyze holder patterns and trends
+- Generate investment-ready data reports
 
-For questions, support, or collaboration opportunities:
+### **Market Analysis**
+- Track holder distribution across collections
+- Monitor cross-collection holder behavior
+- Analyze market concentration and diversity
 
-- **Email**: [michalstefanow.marek@gmail.com](mailto:michalstefanow.marek@gmail.com)
-- **Telegram**: [@mylord1_1](https://t.me/mylord1_1)
+### **Data Science**
+- Large-scale holder data analysis
+- Pattern recognition and trend analysis
+- Statistical modeling and predictions
 
-Feel free to reach out for:
-- Technical support and troubleshooting
-- Feature requests and suggestions
-- Collaboration on Bitcoin inscription projects
-- Custom analysis requirements
-
-## 🔗 Related Resources
-
-- [BestInSlot API Documentation](https://docs.bestinslot.xyz)
-- [Bitcoin Inscriptions Guide](https://docs.ordinals.com)
-- [TypeScript Documentation](https://www.typescriptlang.org/docs)
-
----
-
-**Made with ❤️ for the Bitcoin Inscriptions ecosystem** 
+The application is designed for professional use in Bitcoin inscription analysis and provides a solid foundation for advanced research and investment strategies. 
