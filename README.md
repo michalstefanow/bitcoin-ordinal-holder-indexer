@@ -2,11 +2,19 @@
 
 A comprehensive TypeScript application for analyzing Bitcoin inscription holders across collections using the BestInSlot API. This tool fetches collection data, analyzes holder patterns, and generates filtered reports for investment and analysis purposes.
 
+## 📖 Related Article
+
+📰 **[Read the full article on Medium](https://medium.com/@michalstefanow.marek/bitcoin-ordinal-holder-indexer-28248d6ffa92)** - Detailed explanation of the project, architecture, and implementation.
+
 ## 🎥 Preview Video
+
+<div align="center">
 
 [![Bitcoin Ordinal Holder Indexer Demo](https://img.youtube.com/vi/ZUx1rtyMD5E/0.jpg)](https://youtu.be/ZUx1rtyMD5E)
 
 *Watch the application in action - see how it fetches data, processes large datasets, and generates comprehensive holder analysis reports.*
+
+</div>
 
 ## 🚀 Features
 
